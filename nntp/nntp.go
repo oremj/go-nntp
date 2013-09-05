@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/textproto"
 	"log"
+	"strings"
 )
 
 type NntpClient struct {
@@ -22,6 +23,17 @@ func Dial(addr string) (*NntpClient, error) {
 		return nil, err
 	}
 	return client, nil
+}
+
+func DialAuth(addr string, user string, pass string) (*NntpClient, error) {
+	client, err := Dial(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.Auth(user, pass)
+
+	return client, err
 }
 
 func (client *NntpClient) read(expectCode int) (resp string, err error) {
@@ -49,6 +61,10 @@ func (client *NntpClient) ExecuteCommand(expectCode int, format string,
 	return
 }
 
+func (client *NntpClient) ReadResults() (lines []string, err error) {
+	return client.conn.ReadDotLines()
+}
+
 func (client *NntpClient) Auth(user string, pass string) (err error) {
 	_, err = client.ExecuteCommand(381, "AUTHINFO USER %s", user)
 	if err != nil {
@@ -58,39 +74,37 @@ func (client *NntpClient) Auth(user string, pass string) (err error) {
 	return
 }
 
-func (client *NntpClient) ListGroup(group string) (err error) {
 
-	err = client.write("GROUP %s", group)
+func (client *NntpClient) XOver(group string, overRange string) (err error) {
+	_, err = client.ExecuteCommand(211, "GROUP %s", group)
 	if err != nil {
 		return
 	}
 
-	_, err = client.read(211)
+	_, err = client.ExecuteCommand(224, "XOVER %s", overRange)
 	if err != nil {
 		return
 	}
-	client.write("XOVER 421847226-421857226")
-	log.Println(client.read(224))
-	lines, _ := client.conn.ReadDotLines()
+
+	lines, err := client.ReadResults()
+	if err != nil {
+		return
+	}
+
 	for _, line := range lines {
-		log.Println(line)
+		words := strings.Split(line, "\t")
+		fmt.Println(words)
 	}
-
 	return
 }
 
 func (client *NntpClient) List(filter string) (items []ListItem, err error) {
-	err = client.write("LIST ACTIVE %s", filter)
+	_, err = client.ExecuteCommand(215, "LIST ACTIVE %s", filter)
 	if err != nil {
 		return
 	}
 
-	_, err = client.read(215)
-	if err != nil {
-		return
-	}
-
-	lines, err := client.conn.ReadDotLines()
+	lines, err := client.ReadResults()
 	if err != nil {
 		return
 	}
