@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/textproto"
 	"log"
-	"strings"
 )
 
 type NntpClient struct {
@@ -61,6 +60,11 @@ func (client *NntpClient) ExecuteCommand(expectCode int, format string,
 	return
 }
 
+func (client *NntpClient) SelectGroup(group string) (err error) {
+	_, err = client.ExecuteCommand(211, "GROUP %s", group)
+	return
+}
+
 func (client *NntpClient) ReadResults() (lines []string, err error) {
 	return client.conn.ReadDotLines()
 }
@@ -74,27 +78,17 @@ func (client *NntpClient) Auth(user string, pass string) (err error) {
 	return
 }
 
-
-func (client *NntpClient) XOver(group string, overRange string) (err error) {
-	_, err = client.ExecuteCommand(211, "GROUP %s", group)
-	if err != nil {
-		return
-	}
-
+func (client *NntpClient) XOver(overRange string) (lines []string, err error) {
 	_, err = client.ExecuteCommand(224, "XOVER %s", overRange)
 	if err != nil {
 		return
 	}
 
-	lines, err := client.ReadResults()
+	lines, err = client.ReadResults()
 	if err != nil {
 		return
 	}
 
-	for _, line := range lines {
-		words := strings.Split(line, "\t")
-		fmt.Println(words)
-	}
 	return
 }
 
