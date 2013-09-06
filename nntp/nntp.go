@@ -96,9 +96,11 @@ func (client *NntpClient) XOver(overRange string) (items []OverviewItem, err err
 			continue
 		}
 		items = append(items,
-					   OverviewItem{MsgId: parts[0],
+					   OverviewItem{MsgNum: parts[0],
 								    Subject: parts[1],
+									From: parts[2],
 								    Date: parts[3],
+									MsgId: parts[4],
 								    Bytes: parts[6]})
 	}
 

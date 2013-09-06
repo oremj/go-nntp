@@ -8,8 +8,10 @@ type ListItem struct {
 }
 
 type OverviewItem struct {
-	MsgId string
+	MsgNum string
 	Subject string
+	From string
 	Date string
+	MsgId string
 	Bytes string
 }
