@@ -6,3 +6,10 @@ type ListItem struct {
 	Low int64
 	Status string
 }
+
+type OverviewItem struct {
+	MsgId string
+	Subject string
+	Date string
+	Bytes string
+}

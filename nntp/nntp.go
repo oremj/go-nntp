@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/textproto"
 	"log"
+	"strings"
 )
 
 type NntpClient struct {
@@ -78,15 +79,27 @@ func (client *NntpClient) Auth(user string, pass string) (err error) {
 	return
 }
 
-func (client *NntpClient) XOver(overRange string) (lines []string, err error) {
+func (client *NntpClient) XOver(overRange string) (items []OverviewItem, err error) {
 	_, err = client.ExecuteCommand(224, "XOVER %s", overRange)
 	if err != nil {
 		return
 	}
 
-	lines, err = client.ReadResults()
+	lines, err := client.ReadResults()
 	if err != nil {
 		return
+	}
+	items = make([]OverviewItem, 0, len(lines))
+	for _, line := range lines {
+		parts := strings.Split(line, "\t")
+		if len(parts) < 7 {
+			continue
+		}
+		items = append(items,
+					   OverviewItem{MsgId: parts[0],
+								    Subject: parts[1],
+								    Date: parts[3],
+								    Bytes: parts[6]})
 	}
 
 	return
@@ -105,7 +118,8 @@ func (client *NntpClient) List(filter string) (items []ListItem, err error) {
 	items = make([]ListItem, 0, len(lines))
 	for _, line := range lines {
 		item := ListItem{}
-		_, err := fmt.Sscanf(line, "%s %d %d %s", &item.Name, &item.High, &item.Low, &item.Status)
+		_, err := fmt.Sscanf(line, "%s %d %d %s", &item.Name,
+							 &item.High, &item.Low, &item.Status)
 		if err != nil {
 			log.Println(err)
 			continue
