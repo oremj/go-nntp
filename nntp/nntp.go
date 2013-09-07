@@ -8,16 +8,17 @@ import (
 	"strings"
 )
 
-type NntpClient struct {
+type Client struct {
 	conn *textproto.Conn
+	Group string
 }
 
-func Dial(addr string) (*NntpClient, error) {
+func Dial(addr string) (*Client, error) {
 	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
 	if err != nil {
 		return nil, err
 	}
-	client := &NntpClient{conn: textproto.NewConn(conn)}
+	client := &Client{conn: textproto.NewConn(conn)}
 	_, err = client.read(200) // get welcome message
 	if err != nil {
 		return nil, err
@@ -25,7 +26,7 @@ func Dial(addr string) (*NntpClient, error) {
 	return client, nil
 }
 
-func DialAuth(addr string, user string, pass string) (*NntpClient, error) {
+func DialAuth(addr string, user string, pass string) (*Client, error) {
 	client, err := Dial(addr)
 	if err != nil {
 		return nil, err
@@ -36,18 +37,18 @@ func DialAuth(addr string, user string, pass string) (*NntpClient, error) {
 	return client, err
 }
 
-func (client *NntpClient) read(expectCode int) (resp string, err error) {
+func (client *Client) read(expectCode int) (resp string, err error) {
 	_, resp, err = client.conn.ReadCodeLine(expectCode)
 	log.Println("read:", resp)
 	return
 }
 
-func (client *NntpClient) write(format string, args ...interface{}) error {
+func (client *Client) write(format string, args ...interface{}) error {
 	log.Printf("wrote: " + format, args...)
 	return client.conn.PrintfLine(format, args...)
 }
 
-func (client *NntpClient) ExecuteCommand(expectCode int, format string,
+func (client *Client) ExecuteCommand(expectCode int, format string,
 										 args ...interface{}) (resp string, err error) {
 	err = client.write(format, args...)
 	if err != nil {
@@ -61,16 +62,19 @@ func (client *NntpClient) ExecuteCommand(expectCode int, format string,
 	return
 }
 
-func (client *NntpClient) SelectGroup(group string) (err error) {
+func (client *Client) SelectGroup(group string) (err error) {
 	_, err = client.ExecuteCommand(211, "GROUP %s", group)
+	if err == nil {
+		client.Group = group
+	}
 	return
 }
 
-func (client *NntpClient) ReadResults() (lines []string, err error) {
+func (client *Client) ReadResults() (lines []string, err error) {
 	return client.conn.ReadDotLines()
 }
 
-func (client *NntpClient) Auth(user string, pass string) (err error) {
+func (client *Client) Auth(user string, pass string) (err error) {
 	_, err = client.ExecuteCommand(381, "AUTHINFO USER %s", user)
 	if err != nil {
 		return
@@ -79,7 +83,7 @@ func (client *NntpClient) Auth(user string, pass string) (err error) {
 	return
 }
 
-func (client *NntpClient) XOver(overRange string) (items []OverviewItem, err error) {
+func (client *Client) XOver(overRange string) (items []OverviewItem, err error) {
 	_, err = client.ExecuteCommand(224, "XOVER %s", overRange)
 	if err != nil {
 		return
@@ -107,7 +111,7 @@ func (client *NntpClient) XOver(overRange string) (items []OverviewItem, err err
 	return
 }
 
-func (client *NntpClient) List(filter string) (items []ListItem, err error) {
+func (client *Client) List(filter string) (items []ListItem, err error) {
 	_, err = client.ExecuteCommand(215, "LIST ACTIVE %s", filter)
 	if err != nil {
 		return
