@@ -1,11 +1,14 @@
 package nntp
 
 import (
+	"bufio"
 	"crypto/tls"
 	"fmt"
 	"net/textproto"
 	"log"
 	"strings"
+	"io"
+	"compress/zlib"
 )
 
 type Client struct {
@@ -70,6 +73,31 @@ func (client *Client) SelectGroup(group string) (err error) {
 	return
 }
 
+func (client *Client) ReadCompressedResults() (lines []string, err error) {
+	r, err := zlib.NewReader(client.conn.R)
+	if err != nil {
+		return
+	}
+	reader := bufio.NewReader(r)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		lines = append(lines, line)
+	}
+	r.Close()
+	if err != nil {
+		return
+	}
+
+	return
+	//strings.Split(b.String(), "\n")
+}
+
 func (client *Client) ReadResults() (lines []string, err error) {
 	return client.conn.ReadDotLines()
 }
@@ -84,12 +112,12 @@ func (client *Client) Auth(user string, pass string) (err error) {
 }
 
 func (client *Client) XOver(overRange string) (items []OverviewItem, err error) {
-	_, err = client.ExecuteCommand(224, "XOVER %s", overRange)
+	_, err = client.ExecuteCommand(224, "XZVER %s", overRange)
 	if err != nil {
 		return
 	}
 
-	lines, err := client.ReadResults()
+	lines, err := client.ReadCompressedResults()
 	if err != nil {
 		return
 	}
