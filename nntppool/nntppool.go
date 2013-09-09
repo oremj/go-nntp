@@ -6,20 +6,20 @@ import (
 )
 
 type Pool struct {
-	server string
-	user string
-	password string
-	clients int
+	server    string
+	user      string
+	password  string
+	clients   int
 	available chan *nntp.Client
-	lk sync.Mutex
+	lk        sync.Mutex
 }
 
 func NewPool(server string, user string, pass string, maxClients int) *Pool {
 	return &Pool{
-		server: server,
-		user: user,
-		password: pass,
-		clients: 0,
+		server:    server,
+		user:      user,
+		password:  pass,
+		clients:   0,
 		available: make(chan *nntp.Client, maxClients),
 	}
 }
@@ -54,17 +54,17 @@ func (pool *Pool) makeClient() (client *nntp.Client, err error) {
 
 func (pool *Pool) GetClient() *nntp.Client {
 	select {
-		case conn := <-pool.available:
+	case conn := <-pool.available:
+		return conn
+	default:
+		conn, _ := pool.makeClient()
+		if conn != nil {
 			return conn
-		default:
-			conn, _ := pool.makeClient()
-			if conn != nil {
-				return conn
-			}
-			return <-pool.available
+		}
+		return <-pool.available
 	}
 }
 
 func (pool *Pool) FreeClient(client *nntp.Client) {
-	pool.available <-client
+	pool.available <- client
 }

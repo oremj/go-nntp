@@ -2,17 +2,17 @@ package nntp
 
 import (
 	"bufio"
+	"compress/zlib"
 	"crypto/tls"
 	"fmt"
-	"net/textproto"
-	"log"
-	"strings"
 	"io"
-	"compress/zlib"
+	"log"
+	"net/textproto"
+	"strings"
 )
 
 type Client struct {
-	conn *textproto.Conn
+	conn  *textproto.Conn
 	Group string
 }
 
@@ -47,12 +47,12 @@ func (client *Client) read(expectCode int) (resp string, err error) {
 }
 
 func (client *Client) write(format string, args ...interface{}) error {
-	log.Printf("wrote: " + format, args...)
+	log.Printf("wrote: "+format, args...)
 	return client.conn.PrintfLine(format, args...)
 }
 
 func (client *Client) ExecuteCommand(expectCode int, format string,
-										 args ...interface{}) (resp string, err error) {
+	args ...interface{}) (resp string, err error) {
 	err = client.write(format, args...)
 	if err != nil {
 		return
@@ -127,12 +127,12 @@ func (client *Client) XOver(overRange string) (items []OverviewItem, err error) 
 			continue
 		}
 		items = append(items,
-					   OverviewItem{MsgNum: parts[0],
-								    Subject: parts[1],
-									From: parts[2],
-								    Date: parts[3],
-									MsgId: parts[4],
-								    Bytes: parts[6]})
+			OverviewItem{MsgNum: parts[0],
+				Subject: parts[1],
+				From:    parts[2],
+				Date:    parts[3],
+				MsgId:   parts[4],
+				Bytes:   parts[6]})
 	}
 
 	return
@@ -152,7 +152,7 @@ func (client *Client) List(filter string) (items []ListItem, err error) {
 	for _, line := range lines {
 		item := ListItem{}
 		_, err := fmt.Sscanf(line, "%s %d %d %s", &item.Name,
-							 &item.High, &item.Low, &item.Status)
+			&item.High, &item.Low, &item.Status)
 		if err != nil {
 			log.Println(err)
 			continue
