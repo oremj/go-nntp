@@ -95,7 +95,6 @@ func (client *Client) ReadCompressedResults() (lines []string, err error) {
 	}
 
 	return
-	//strings.Split(b.String(), "\n")
 }
 
 func (client *Client) ReadResults() (lines []string, err error) {

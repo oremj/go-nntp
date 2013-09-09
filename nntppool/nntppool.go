@@ -34,12 +34,22 @@ func (pool *Pool) grabClientLock() bool {
 	return false
 }
 
-func (pool *Pool) makeClient() (client *nntp.Client) {
+func (pool *Pool) returnClientLock() {
+	pool.lk.Lock()
+	defer pool.lk.Unlock()
+	pool.clients--
+}
+
+func (pool *Pool) makeClient() (client *nntp.Client, err error) {
 	if pool.grabClientLock() {
-		client, _ = nntp.DialAuth(pool.server, pool.user, pool.password)
-		return client
+		client, err = nntp.DialAuth(pool.server, pool.user, pool.password)
+		if err != nil {
+			pool.returnClientLock()
+			return
+		}
+		return
 	}
-	return nil
+	return
 }
 
 func (pool *Pool) GetClient() *nntp.Client {
@@ -47,7 +57,7 @@ func (pool *Pool) GetClient() *nntp.Client {
 		case conn := <-pool.available:
 			return conn
 		default:
-			conn := pool.makeClient()
+			conn, _ := pool.makeClient()
 			if conn != nil {
 				return conn
 			}
